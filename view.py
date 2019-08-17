@@ -1,7 +1,7 @@
 from PySide2.QtCore import Qt, QSize, QRectF
-from PySide2.QtGui import QWheelEvent, QIcon, QMatrix
-from PySide2.QtOpenGL import QGLFormat, QGLWidget
-from PySide2.QtWidgets import QGraphicsView, QFrame, QWidget, QStyle, QToolButton, QVBoxLayout, QSlider, QVBoxLayout, \
+from PySide2.QtGui import QWheelEvent, QIcon, QMatrix, QPainter
+from PySide2.QtOpenGL import QGLFormat, QGLWidget, QGL
+from PySide2.QtWidgets import QGraphicsView, QFrame, QWidget, QStyle, QToolButton, QSlider, QVBoxLayout, \
     QButtonGroup, QGridLayout, QHBoxLayout, QLabel
 
 
@@ -26,10 +26,11 @@ class View(QFrame):
         self.name = name
         self.setFrameShape(QFrame.Shape(QFrame.Sunken | QFrame.StyledPanel))
         graphicsView = GraphicsView(self)
-        # graphicsView.setRenderHint(QPainter.Anti,False)
-        # graphicsView.setDragMode()
-        # graphicsView.setOptimizationFlag()
-        # graphicsView.setTransformationAnchor()
+        graphicsView.setRenderHint(QPainter.Antialiasing, False)
+        graphicsView.setDragMode(QGraphicsView.RubberBandDrag)
+        graphicsView.setOptimizationFlag(QGraphicsView.DontSavePainterState)
+        graphicsView.setViewportUpdateMode(QGraphicsView.SmartViewportUpdate)
+        graphicsView.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
 
         size = self.style().pixelMetric(QStyle.PM_ToolBarIconSize)
         iconSize = QSize(size, size)
@@ -44,15 +45,15 @@ class View(QFrame):
         zoomOutIcon.setAutoRepeat(True)
         zoomOutIcon.setAutoRepeatInterval(33)
         zoomOutIcon.setAutoRepeatDelay(0)
-        zoomOutIcon.setIcon(QIcon(":/zoomin.png"))
+        zoomOutIcon.setIcon(QIcon(":/zoomout.png"))
         zoomOutIcon.setIconSize(iconSize)
 
         zoomSlider = QSlider()
         zoomSlider.setMinimum(0)
-        zoomSlider.setMinimum(500)
+        zoomSlider.setMaximum(500)
         zoomSlider.setValue(250)
         self.zoomSlider = zoomSlider
-        # zoomSlider.setTickPosition()
+        zoomSlider.setTickPosition(QSlider.TicksRight)
 
         zoomSliderLayout = QVBoxLayout()
         zoomSliderLayout.addWidget(zoomInIcon)
@@ -91,6 +92,7 @@ class View(QFrame):
         selectModeButton.setText(self.tr("Select"))
         selectModeButton.setCheckable(True)
         selectModeButton.setChecked(True)
+        self.selectModeButton = selectModeButton
         dragModeButton = QToolButton()
         dragModeButton.setText(self.tr("Drag"))
         dragModeButton.setCheckable(True)
@@ -103,12 +105,8 @@ class View(QFrame):
         openGlButton = QToolButton()
         openGlButton.setText(self.tr("OpenGL"))
         openGlButton.setCheckable(True)
-        # ifndef QT_NO_OPENGL
         openGlButton.setEnabled(QGLFormat.hasOpenGL())
-        # else
-        openGlButton.setEnabled(False)
         self.openGlButton = openGlButton
-        # endif
         printButton = QToolButton()
         printButton.setIcon(QIcon(":/fileprint.png"))
 
@@ -168,7 +166,8 @@ class View(QFrame):
 
     def setupMatrix(self):
         scale = pow(2.0, (self.zoomSlider.value() - 250) / 50.0)
-        matrix = QMatrix
+        print(F"zoomSlider.value = {self.zoomSlider.value()} scale={scale}")
+        matrix = QMatrix()
         matrix.scale(scale, scale)
         matrix.rotate(self.rotateSlider.value())
 
@@ -176,7 +175,9 @@ class View(QFrame):
         self.setResetButtonEnabled()
 
     def togglePointerMode(self):
-        self.graphicsView.setDragMode()
+        isChecked = self.selectModeButton.isChecked()
+        self.graphicsView.setDragMode(QGraphicsView.RubberBandDrag if isChecked else GraphicsView.ScrollHandDrag)
+        self.graphicsView.setInteractive(isChecked)
 
     def toggleOpenGL(self):
         self.graphicsView.setViewport(
@@ -188,11 +189,14 @@ class View(QFrame):
     def print(self):
         pass
 
-    def zoomIn(self, level: int):
-        self.zoomSlider.setValue(self.zoomSlider.value() + level)
+    def zoomIn(self):
+        self.zoom(1)
 
-    def zoomOut(self, level: int):
-        self.zoomSlider.setValue(self.zoomSlider.value() - level)
+    def zoomOut(self):
+        self.zoom(-1)
+
+    def zoom(self, level: int):
+        self.zoomSlider.setValue(self.zoomSlider.value() + level)
 
     def rotateLeft(self):
         self.rotateSlider.setValue(self.rotateSlider.value() - 10)
