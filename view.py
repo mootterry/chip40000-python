@@ -184,7 +184,7 @@ class View(QFrame):
             QGLWidget(QGLFormat(QGL.SampleBuffers)) if self.openGlButton.isChecked() else QWidget)
 
     def toggleAntialiasing(self):
-        self.graphicsView.setRenderHint(Qt.An, self.antialiasButton.isChecked())
+        self.graphicsView.setRenderHint(QPainter.Antialiasing, self.antialiasButton.isChecked())
 
     def print(self):
         pass
